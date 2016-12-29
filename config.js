@@ -1,8 +1,10 @@
 module.exports = {
-  climatePort: 'A',
+  climatePort: 'B',
+  relayPort: 'A',
   interval: 750,
-  tempDifference: 1.5,
-  sampleSize: 100,
-  fanOnDistance: 0.70,
-  fanOffDistance: 1.2
+  sampleSizes: {
+    max: 500,
+    min: 50
+  },
+  tempDiffThreshold: 1.15
 }

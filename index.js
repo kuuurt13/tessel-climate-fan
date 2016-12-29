@@ -1,58 +1,59 @@
 var tessel = require('tessel');
 var climatelib = require('climate-si7020');
+var relaylib = require('relay-mono');
 var config = require('./config');
 
 var climate = climatelib.use(tessel.port[config.climatePort]);
+var relay = relaylib.use(tessel.port[config.relayPort]);
 
 var interval = config.interval;
-var sampleSize = config.sampleSize;
-var tempDiffThreshold = config.tempDifference;
-var fanOnDistance = config.fanOnDistance;
-var fanOffDistance = config.fanOffDistance;
+var sampleSizes = config.sampleSizes;
+var tempDiffThreshold = config.tempDiffThreshold;
+var tempJumpLimit = config.tempJumpLimit;
 
-var sampleTemps = [];
-var avgTemp = 0;
+var checkTempLed = tessel.led[3];
 var fanOn = false;
+var temp = { samples: [], avg: 0 };
 
 climate.on('ready', function () {
   climateInterval();
-});
-
-climate.on('error', function (err) {
+  tessel.led[2].on();
+}).on('error', function (err) {
   console.log('error connecting climate module', err);
 });
 
 function climateInterval() {
   return setInterval(() => {
-    climate.readTemperature('f', (err, temp) => {
-      var tempChange = temp - avgTemp;
+    climate.readTemperature('f', (err, currentTemp) => {
+      var tempDiffFromAvg = currentTemp - temp.avg;
+
+      checkTempLed.off();
 
       console.log(
-        'Current Temp:', temp.toFixed(4),
-        '/ Average Temp:', avgTemp.toFixed(4),
-        '/ Temp Diff:', tempChange.toFixed(4),
+        'Current Temp:', currentTemp.toFixed(4),
+        '/ Average Temp:', temp.avg.toFixed(4),
+        '/ Temp Diff:', tempDiffFromAvg.toFixed(4),
+        '/ Checking Temp Diff:', temp.samples.length >= sampleSizes.min,
         '/ Fan On:', fanOn
       );
 
-      if (!fanOn) {
-        if (avgTemp && tempChange >= tempDiffThreshold) {
-          return toggleFan(true);
-        }
+      if (temp.avg && temp.samples.length >= sampleSizes.min) {
+        tessel.led[3].on();
 
-        if (!avgTemp || tempChange <= fanOnDistance) {
-          avgTemp = getAvgTemp(temp.toFixed(4));
-        }
-      } else {
-        if (tempChange <= fanOffDistance) {
-          toggleFan(false);
+        if (!fanOn && tempDiffFromAvg >= tempDiffThreshold) {
+          toggleFan();
+        } else if (fanOn && tempDiffFromAvg <= tempDiffThreshold) {
+          toggleFan();
         }
       }
+
+      temp.avg = getAvgTemp(currentTemp.toFixed(4), temp.samples);
     });
   }, interval);
 }
 
-function getAvgTemp(temp) {
-  if (sampleTemps.length === sampleSize) {
+function getAvgTemp(temp, sampleTemps) {
+  if (sampleTemps.length === sampleSizes.max) {
     sampleTemps.splice((sampleTemps.length - 1), 1);
   }
 
@@ -63,11 +64,10 @@ function getAvgTemp(temp) {
 }
 
 function toggleFan(state) {
-  if (state) {
-    console.log('Turn on fan');
-  } else {
-    console.log('Turn off fan');
-  }
+  fanOn = !fanOn;
+  temp.samples = [];
 
-  fanOn = state;
+  relay.toggle(1, (err) => {
+    if (err) console.log("Error toggling on fan", err);
+  });
 }
