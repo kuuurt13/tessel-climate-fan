@@ -3,11 +3,11 @@ module.exports = {
   relayPort: 'A',
   interval: 750,
   sampleSizes: {
-    max: 250,
-    min: 90
+    max: 500,
+    min: 60
   },
   tempDiff: {
-    on: 1.15,
-    off: 0.55
+    on: 1.05,
+    off: 0.25
   }
 }
