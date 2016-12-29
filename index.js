@@ -8,48 +8,45 @@ var relay = relaylib.use(tessel.port[config.relayPort]);
 
 var interval = config.interval;
 var sampleSizes = config.sampleSizes;
-var tempDiffThreshold = config.tempDiffThreshold;
-var tempJumpLimit = config.tempJumpLimit;
+var tempDiff = config.tempDiff;
 
 var checkTempLed = tessel.led[3];
-var fanOn = false;
 var temp = { samples: [], avg: 0 };
+var fanOn = false;
 
 climate.on('ready', function () {
-  climateInterval();
+  setInterval(monitorClimate, interval);
   tessel.led[2].on();
 }).on('error', function (err) {
   console.log('error connecting climate module', err);
 });
 
-function climateInterval() {
-  return setInterval(() => {
-    climate.readTemperature('f', (err, currentTemp) => {
-      var tempDiffFromAvg = currentTemp - temp.avg;
+function monitorClimate() {
+  climate.readTemperature('f', (err, currentTemp) => {
+    var tempDiffFromAvg = currentTemp - temp.avg;
 
-      checkTempLed.off();
+    checkTempLed.off();
 
-      console.log(
-        'Current Temp:', currentTemp.toFixed(4),
-        '/ Average Temp:', temp.avg.toFixed(4),
-        '/ Temp Diff:', tempDiffFromAvg.toFixed(4),
-        '/ Checking Temp Diff:', temp.samples.length >= sampleSizes.min,
-        '/ Fan On:', fanOn
-      );
+    console.log(
+      'Current Temp:', currentTemp.toFixed(4),
+      '/ Average Temp:', temp.avg.toFixed(4),
+      '/ Temp Diff:', tempDiffFromAvg.toFixed(4),
+      '/ Checking Temp Diff:', temp.samples.length >= sampleSizes.min,
+      '/ Fan On:', fanOn
+    );
 
-      if (temp.avg && temp.samples.length >= sampleSizes.min) {
-        tessel.led[3].on();
+    if (temp.avg && temp.samples.length >= sampleSizes.min) {
+      tessel.led[3].on();
 
-        if (!fanOn && tempDiffFromAvg >= tempDiffThreshold) {
-          toggleFan();
-        } else if (fanOn && tempDiffFromAvg <= tempDiffThreshold) {
-          toggleFan();
-        }
+      if (!fanOn && tempDiffFromAvg >= tempDiff.on) {
+        toggleFan();
+      } else if (fanOn && tempDiffFromAvg <= tempDiff.off) {
+        toggleFan();
       }
+    }
 
-      temp.avg = getAvgTemp(currentTemp.toFixed(4), temp.samples);
-    });
-  }, interval);
+    temp.avg = getAvgTemp(currentTemp.toFixed(4), temp.samples);
+  });
 }
 
 function getAvgTemp(temp, sampleTemps) {
