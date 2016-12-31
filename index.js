@@ -11,12 +11,13 @@ var sampleSizes = config.sampleSizes;
 var tempDiff = config.tempDiff;
 
 var checkTempLed = tessel.led[3];
+var onActivateLed = tessel.led[2];
 var temp = { samples: [], avg: 0 };
 var fanOn = false;
 
 climate.on('ready', function () {
   setInterval(monitorClimate, interval);
-  tessel.led[2].on();
+  onActivateLed.on();
 }).on('error', function (err) {
   console.log('error connecting climate module', err);
 });
@@ -35,8 +36,8 @@ function monitorClimate() {
       '/ Fan On:', fanOn
     );
 
-    if (temp.avg && temp.samples.length >= sampleSizes.min) {
-      tessel.led[3].on();
+    if (temp.samples.length >= sampleSizes.min) {
+      checkTempLed.on();
 
       if (!fanOn && tempDiffFromAvg >= tempDiff.on) {
         toggleFan();
@@ -65,6 +66,6 @@ function toggleFan(state) {
   temp.samples = [];
 
   relay.toggle(1, (err) => {
-    if (err) console.log("Error toggling on fan", err);
+    if (err) console.log("Error fan toggle", err);
   });
 }
