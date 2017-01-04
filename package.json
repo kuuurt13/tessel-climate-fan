@@ -1,5 +1,5 @@
 {
-  "name": "tessel-climate-fan",
+  "name": "tessel-heater-fan",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
