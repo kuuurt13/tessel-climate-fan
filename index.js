@@ -55,7 +55,7 @@ function getAvgTemp(temp, sampleTemps) {
     sampleTemps.splice((sampleTemps.length - 1), 1);
   }
 
-  sampleTemps.push(parseFloat(temp));
+  sampleTemps.unshift(parseFloat(temp));
 
   var sum = sampleTemps.reduce((sum, cur) => sum += cur, 0);
   return sum / sampleTemps.length;
